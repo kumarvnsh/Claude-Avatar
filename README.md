@@ -53,10 +53,10 @@ bash scripts/build.sh
 
 ```bash
 bash scripts/build.sh
-npm run package
+npm run package -- --publish never
 ```
 
-The packaged macOS artifacts are written to the `release/` directory.
+The packaged macOS artifacts are written to the `release/` directory. On Apple Silicon, the generated DMG is named like `release/Claude Avatars-1.0.0-arm64.dmg`.
 
 ## Permissions And Notes
 
