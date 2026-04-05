@@ -22,6 +22,16 @@ class ClaudeAvatarsApp {
     this.trayManager = new TrayManager();
   }
 
+  private syncRendererState(): void {
+    if (!this.mainWindow || this.mainWindow.isDestroyed()) {
+      return;
+    }
+
+    const dockInfo = this.dockDetector.getDockInfo();
+    this.mainWindow.webContents.send(IPC_CHANNELS.DOCK_POSITION_CHANGED, dockInfo);
+    this.mainWindow.webContents.send(IPC_CHANNELS.SESSIONS_UPDATED, this.currentSessions);
+  }
+
   private getOverlayWindowBounds(dockInfo: DockInfo): DockInfo['bounds'] {
     const overlaySize = 160;
     const bounds = { ...dockInfo.bounds };
@@ -106,6 +116,12 @@ class ClaudeAvatarsApp {
     this.mainWindow.loadFile(
       path.join(__dirname, '..', 'renderer', 'index.html')
     );
+
+    this.mainWindow.webContents.once('did-finish-load', () => {
+      this.mainWindow?.showInactive();
+      this.mainWindow?.moveTop();
+      this.syncRendererState();
+    });
 
     // Uncomment for debugging:
     // this.mainWindow.webContents.openDevTools({ mode: 'detach' });

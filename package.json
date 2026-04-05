@@ -5,9 +5,9 @@
   "main": "dist/main/index.js",
   "scripts": {
     "dev": "bash scripts/build.sh && electron .",
-    "build": "tsc",
+    "build": "bash scripts/build.sh",
     "watch": "tsc --watch",
-    "package": "electron-builder --mac",
+    "package": "bash scripts/build.sh && electron-builder --mac",
     "clean": "rm -rf dist"
   },
   "author": "",
