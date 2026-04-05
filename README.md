@@ -22,6 +22,13 @@ Claude Avatars gives you an ambient view of what your sessions are doing without
 - [Download the latest macOS DMG (Apple Silicon)](https://github.com/kumarvnsh/Claude-Avatar/releases/latest/download/Claude-Avatars-latest-arm64.dmg)
 - [Browse all releases](https://github.com/kumarvnsh/Claude-Avatar/releases)
 
+### Install with Homebrew
+
+```bash
+brew tap kumarvnsh/claude-avatar https://github.com/kumarvnsh/Claude-Avatar
+brew install --cask kumarvnsh/claude-avatar/claude-avatars
+```
+
 ### Install from a DMG
 
 If you have a packaged Claude Avatars DMG:
@@ -83,9 +90,25 @@ npm run package  # build a macOS package with electron-builder
 npm run clean    # remove dist output
 ```
 
+Homebrew cask maintenance:
+
+```bash
+shasum -a 256 "release/Claude-Avatars-latest-arm64.dmg"
+brew tap kumarvnsh/claude-avatar https://github.com/kumarvnsh/Claude-Avatar
+brew audit --cask --strict kumarvnsh/claude-avatar/claude-avatars
+```
+
+When publishing a new DMG release:
+
+1. Build and upload the new `Claude-Avatars-latest-arm64.dmg` asset to GitHub Releases.
+2. Update `version` and `sha256` in `Casks/claude-avatars.rb`.
+3. Re-run `brew audit --cask Casks/claude-avatars.rb`.
+4. Push the cask update so Homebrew installs the new release correctly.
+
 Project structure:
 
 ```text
+Casks/         Homebrew cask definition for repo-based installs
 src/main      Electron main process, tray, session monitor, Dock detection
 src/preload   Safe IPC bridge exposed to the renderer
 src/renderer  Canvas avatar rendering, overlay page, tooltip logic
