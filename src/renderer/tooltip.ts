@@ -1,4 +1,7 @@
 import { SessionInfo } from '../shared/types';
+import { formatLastUpdatedLabel } from '../shared/session-freshness';
+import { getPrimaryTooltipStatus } from './tooltip-activity';
+import { getTooltipTop } from './tooltip-position';
 
 export class Tooltip {
   private element: HTMLElement;
@@ -26,37 +29,49 @@ export class Tooltip {
 
     const stateLabel = document.createElement('div');
     stateLabel.className = 'tooltip-state';
-    stateLabel.textContent = this.stateEmoji(session.state) + ' ' + session.state;
+    stateLabel.textContent = getPrimaryTooltipStatus({
+      state: session.state,
+      activityLabel: session.activityLabel,
+    });
     this.element.appendChild(stateLabel);
 
-    // Position above the cursor
+    const updatedLabel = document.createElement('div');
+    updatedLabel.className = 'tooltip-meta';
+    updatedLabel.textContent = formatLastUpdatedLabel(session.lastUpdatedAt);
+    this.element.appendChild(updatedLabel);
+
+    const priorityLabel = document.createElement('div');
+    priorityLabel.className = 'tooltip-meta';
+    priorityLabel.textContent = `Priority: ${session.attentionReason}`;
+    this.element.appendChild(priorityLabel);
+
+    if (session.isStale) {
+      const staleLabel = document.createElement('div');
+      staleLabel.className = 'tooltip-stale';
+      staleLabel.textContent = 'Stale';
+      this.element.appendChild(staleLabel);
+    }
+
+    // Measure after content update so we can clamp the card inside the overlay.
     const tooltipRect = this.element.getBoundingClientRect();
     const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
     let left = x - tooltipRect.width / 2;
     left = Math.max(8, Math.min(left, viewportWidth - tooltipRect.width - 8));
+    const top = getTooltipTop({
+      anchorY: y,
+      tooltipHeight: tooltipRect.height,
+      viewportHeight,
+    });
 
     this.element.style.left = `${left}px`;
-    
-    // Instead of being relative to cursor Y (which can push it off the top of the window),
-    // force it to a fixed position perfectly above the avatars.
-    // Since avatars are ~24px from bottom + 48px height = 72px total, bottom: 85px is safe.
-    this.element.style.bottom = `85px`;
-    this.element.style.top = 'auto';
+    this.element.style.top = `${top}px`;
+    this.element.style.bottom = 'auto';
     this.element.classList.remove('hidden');
   }
 
   hide(): void {
     this.element.classList.add('hidden');
-  }
-
-  private stateEmoji(state: string): string {
-    switch (state) {
-      case 'coding': return '✨';
-      case 'thinking': return '💭';
-      case 'idle': return '😴';
-      case 'error': return '❌';
-      default: return '•';
-    }
   }
 }

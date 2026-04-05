@@ -3,6 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { SessionInfo, SessionState } from '../shared/types';
+import { applySessionFreshness } from '../shared/session-freshness';
+import { applySessionAttention, sortSessionsByAttention } from '../shared/session-attention';
+import { determineSessionState } from '../shared/session-state';
+import { deriveActivityLabel } from '../shared/terminal-activity';
+import { readClaudeTranscriptSnippet, readTerminalSnapshots } from './terminal-activity';
 
 interface RawSessionFile {
   pid: number;
@@ -53,7 +58,8 @@ export class SessionMonitor extends EventEmitter {
 
     try {
       const sessions = this.discoverSessions();
-      const enriched = sessions.map(s => this.enrichSession(s));
+      const terminalSnapshots = readTerminalSnapshots();
+      const enriched = sessions.map(s => this.enrichSession(s, terminalSnapshots));
       this.updateSessions(enriched);
     } catch (err) {
       // Sessions dir might not exist yet — that's fine
@@ -97,34 +103,45 @@ export class SessionMonitor extends EventEmitter {
     }
   }
 
-  private enrichSession(raw: RawSessionFile): SessionInfo {
-    const state = this.determineState(raw);
+  private enrichSession(raw: RawSessionFile, terminalSnapshots = readTerminalSnapshots()): SessionInfo {
     const currentTask = this.getCurrentTask(raw.sessionId);
+    const state = this.determineState(raw, currentTask);
+    const now = Date.now();
+    const projectName = path.basename(raw.cwd);
+    const transcriptText = readClaudeTranscriptSnippet(raw.sessionId);
 
     return {
       sessionId: raw.sessionId,
       pid: raw.pid,
       cwd: raw.cwd,
-      projectName: path.basename(raw.cwd),
+      projectName,
       startedAt: raw.startedAt,
       state,
       currentTask,
       color: this.sessionIdToColor(raw.sessionId),
+      lastUpdatedAt: now,
+      isStale: false,
+      attentionScore: 0,
+      attentionReason: '',
+      activityLabel: deriveActivityLabel(
+        {
+          cwd: raw.cwd,
+          projectName,
+          currentTask,
+          state,
+        },
+        terminalSnapshots,
+        transcriptText ?? undefined
+      ),
     };
   }
 
-  private determineState(raw: RawSessionFile): SessionState {
-    const task = this.getCurrentTask(raw.sessionId);
-
-    if (task) {
-      const lower = task.toLowerCase();
-      if (lower.includes('thinking') || lower.includes('planning') || lower.includes('researching')) {
-        return 'thinking';
-      }
-      return 'coding';
-    }
-
-    return 'idle';
+  private determineState(raw: RawSessionFile, currentTask: string | null): SessionState {
+    return determineSessionState({
+      currentTask,
+      kind: raw.kind,
+      entrypoint: raw.entrypoint,
+    });
   }
 
   private getCurrentTask(sessionId: string): string | null {
@@ -167,14 +184,28 @@ export class SessionMonitor extends EventEmitter {
   }
 
   private updateSessions(newSessions: SessionInfo[]): void {
-    const newMap = new Map(newSessions.map(s => [s.sessionId, s]));
+    const now = Date.now();
+    const scoredSessions = sortSessionsByAttention(
+      newSessions.map((session) =>
+        applySessionAttention(
+          applySessionFreshness(this.currentSessions.get(session.sessionId), session, now)
+        )
+      )
+    );
+    const newMap = new Map(scoredSessions.map(s => [s.sessionId, s]));
 
     // Check if anything changed
     let changed = newMap.size !== this.currentSessions.size;
     if (!changed) {
       for (const [id, session] of newMap) {
         const existing = this.currentSessions.get(id);
-        if (!existing || existing.state !== session.state || existing.currentTask !== session.currentTask) {
+        if (!existing ||
+          existing.state !== session.state ||
+          existing.currentTask !== session.currentTask ||
+          existing.activityLabel !== session.activityLabel ||
+          existing.isStale !== session.isStale ||
+          existing.attentionScore !== session.attentionScore ||
+          existing.attentionReason !== session.attentionReason) {
           changed = true;
           break;
         }
@@ -183,7 +214,7 @@ export class SessionMonitor extends EventEmitter {
 
     if (changed) {
       this.currentSessions = newMap;
-      this.emit('sessions-updated', Array.from(newMap.values()));
+      this.emit('sessions-updated', scoredSessions);
     }
   }
 
@@ -201,6 +232,11 @@ export class SessionMonitor extends EventEmitter {
         state: 'coding',
         currentTask: 'Implementing user authentication',
         color: this.sessionIdToColor('mock-session-001'),
+        lastUpdatedAt: Date.now(),
+        isStale: false,
+        attentionScore: 0,
+        attentionReason: '',
+        activityLabel: 'Coding',
       },
       {
         sessionId: 'mock-session-002',
@@ -211,6 +247,11 @@ export class SessionMonitor extends EventEmitter {
         state: 'thinking',
         currentTask: 'Researching database architecture',
         color: this.sessionIdToColor('mock-session-002'),
+        lastUpdatedAt: Date.now(),
+        isStale: false,
+        attentionScore: 0,
+        attentionReason: '',
+        activityLabel: 'Planning',
       },
       {
         sessionId: 'mock-session-003',
@@ -221,6 +262,11 @@ export class SessionMonitor extends EventEmitter {
         state: 'idle',
         currentTask: null,
         color: this.sessionIdToColor('mock-session-003'),
+        lastUpdatedAt: Date.now(),
+        isStale: false,
+        attentionScore: 0,
+        attentionReason: '',
+        activityLabel: 'Thinking',
       },
     ];
 

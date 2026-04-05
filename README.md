@@ -17,6 +17,11 @@ Claude Avatars gives you an ambient view of what your sessions are doing without
 
 ## Installation
 
+### Download the latest build
+
+- [Download the latest macOS DMG (Apple Silicon)](https://github.com/kumarvnsh/Claude-Avatar/releases/latest/download/Claude-Avatars-latest-arm64.dmg)
+- [Browse all releases](https://github.com/kumarvnsh/Claude-Avatar/releases)
+
 ### Install from a DMG
 
 If you have a packaged Claude Avatars DMG:
@@ -57,6 +62,7 @@ npm run package -- --publish never
 ```
 
 The packaged macOS artifacts are written to the `release/` directory. On Apple Silicon, the generated DMG is named like `release/Claude Avatars-1.0.0-arm64.dmg`.
+The stable release filename used for direct downloads is `release/Claude-Avatars-latest-arm64.dmg`.
 
 ## Permissions And Notes
 

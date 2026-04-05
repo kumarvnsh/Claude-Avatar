@@ -1,5 +1,6 @@
 appId: com.claude.avatars
 productName: Claude Avatars
+artifactName: Claude-Avatars-latest-${arch}.${ext}
 directories:
   output: release
   buildResources: assets

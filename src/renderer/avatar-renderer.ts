@@ -93,14 +93,17 @@ export class AvatarRenderer {
       }
     }
 
+    const orderedAvatars: Map<string, AvatarState> = new Map();
+
     // Update or spawn sessions
     for (const session of sessions) {
       const existing = this.avatars.get(session.sessionId);
       if (existing) {
         existing.session = session;
+        orderedAvatars.set(session.sessionId, existing);
       } else {
         // Spawn new avatar
-        this.avatars.set(session.sessionId, {
+        orderedAvatars.set(session.sessionId, {
           session,
           baseX: 0,
           targetX: 0,
@@ -118,6 +121,15 @@ export class AvatarRenderer {
         });
       }
     }
+
+    // Keep fading avatars alive until their exit animation completes.
+    for (const [id, state] of this.avatars) {
+      if (!newIds.has(id)) {
+        orderedAvatars.set(id, state);
+      }
+    }
+
+    this.avatars = orderedAvatars;
 
     // Calculate target positions
     this.recalculatePositions();
@@ -263,6 +275,13 @@ export class AvatarRenderer {
         drawY,
         avatar.session.color
       );
+
+      if (avatar.session.isStale) {
+        this.ctx.fillStyle = '#f59e0b';
+        this.ctx.beginPath();
+        this.ctx.arc(drawX + DISPLAY_SIZE - 6, drawY + 6, 4, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
 
       // Draw particles
       this.updateAndDrawParticles(avatar, drawX, drawY, timestamp);

@@ -1,6 +1,7 @@
 // Shared types for Claude Avatars
 
 export type SessionState = 'thinking' | 'coding' | 'idle' | 'error';
+export type ActivityLabel = 'Coding' | 'Planning' | 'Reviewing' | 'Waiting' | 'Thinking';
 
 export type DockPosition = 'bottom' | 'left' | 'right';
 
@@ -13,6 +14,11 @@ export interface SessionInfo {
   state: SessionState;
   currentTask: string | null;  // activeForm text
   color: string;         // HSL color string, deterministic from sessionId
+  lastUpdatedAt: number;
+  isStale: boolean;
+  attentionScore: number;
+  attentionReason: string;
+  activityLabel: ActivityLabel;
 }
 
 export interface DockInfo {
