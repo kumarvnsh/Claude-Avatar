@@ -1,0 +1,21 @@
+{
+  "name": "claude-avatars",
+  "version": "1.0.0",
+  "description": "Animated pixel-art creatures floating above the macOS Dock — one per active Claude Code session",
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "bash scripts/build.sh && electron .",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "package": "electron-builder --mac",
+    "clean": "rm -rf dist"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.1.8",
+    "esbuild": "^0.28.0",
+    "typescript": "^5.6.0"
+  }
+}
